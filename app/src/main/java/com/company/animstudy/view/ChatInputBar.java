@@ -8,14 +8,13 @@ import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.widget.CardView;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
 
 import com.company.animstudy.R;
 import com.company.animstudy.util.AndroidSystem;
-import com.company.animstudy.util.Animation;
+import com.company.animstudy.util.Anim;
 
 import static com.company.animstudy.util.Dimensions.*;
 
@@ -29,8 +28,9 @@ public class ChatInputBar extends ConstraintLayout {
     private static final float PLAY_BTN_WIDTH_HEIGHT_PX = px(56);
     private static final float MAX_PLAY_BTN_SCALE = 2;
 
-    private static final int BASE_PLAY_BTN_MARGIN_PX = (int) px(8);
-    private static final int BASE_CV_INPUT_ROOT_PX = (int) px(72);
+    private static final int BASE_PLAY_BTN_BOT_END_MARGIN_PX = (int) px(8);
+    private static final int BASE_CV_INPUT_ROOT_END_MARGIN_PX = (int) px(72);
+    private static final int BASE_CV_LOCK_ROOT_BOT_MARGIN_PX = (int) px(100);
 
     private Context context;
 
@@ -50,6 +50,7 @@ public class ChatInputBar extends ConstraintLayout {
     private ConstraintLayout clRoot;
     private FloatingActionButton fabSend;
     private CardView cvInputRoot;
+    private CardView cvLockRoot;
 
     public ChatInputBar(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -62,6 +63,7 @@ public class ChatInputBar extends ConstraintLayout {
         fabSend.setOnTouchListener(new DragListener());
 
         cvInputRoot = findViewById(R.id.cv_input_root);
+        cvLockRoot = findViewById(R.id.cv_lock_root);
     }
 
     @Override
@@ -85,43 +87,26 @@ public class ChatInputBar extends ConstraintLayout {
                     if (isUserTouchDisabled) {
                         isUserTouchDisabled = false;
                     } else {
-                        Animation.scaleView(fabSend, 1f, 1f);
-
-                        new Handler().postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                enableLayoutTransition(false);
-                            }
-                        }, LAYOUT_TRANSITION_DURATION + 25); // + some delay
-
-                        enableLayoutTransition(true);
+                        Anim.scaleView(fabSend, 1f, 1f);
+                        enableTemporalViewTransitions();
                     }
 
-                    ConstraintLayout.LayoutParams fabSendLayoutParams =
-                            (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
-                    fabSendLayoutParams.setMarginEnd(BASE_PLAY_BTN_MARGIN_PX);
-                    fabSendLayoutParams.bottomMargin = BASE_PLAY_BTN_MARGIN_PX;
-                    fabSend.setLayoutParams(fabSendLayoutParams);
-
-                    ConstraintLayout.LayoutParams cvInputRootLayoutParams =
-                            (ConstraintLayout.LayoutParams) cvInputRoot.getLayoutParams();
-                    cvInputRootLayoutParams.setMarginEnd(BASE_CV_INPUT_ROOT_PX);
-                    cvInputRoot.setLayoutParams(cvInputRootLayoutParams);
-
+                    resetViewsState();
                     break;
 
                 case MotionEvent.ACTION_DOWN:
 
                     AndroidSystem.vibrate(context);
-                    Animation.scaleView(fabSend, MAX_PLAY_BTN_SCALE, MAX_PLAY_BTN_SCALE);
+                    Anim.scaleView(fabSend, MAX_PLAY_BTN_SCALE, MAX_PLAY_BTN_SCALE);
+                    showLock(true);
 
                     if (!isUserTouchDisabled) {
-                        currentX = view.getX() - event.getRawX();
-                        currentY = view.getY() - event.getRawY();
+                        currentX = fabSend.getX() - event.getRawX();
+                        currentY = fabSend.getY() - event.getRawY();
 
                         if (baseX == 0 && baseY == 0) {
-                            baseX = view.getX();
-                            baseY = view.getY();
+                            baseX = fabSend.getX();
+                            baseY = fabSend.getY();
                         }
                     }
 
@@ -143,25 +128,27 @@ public class ChatInputBar extends ConstraintLayout {
 
                         float destinationY = event.getRawY() + currentY;
                         destinationY = destinationY > baseY ? baseY : destinationY;
-                        float maxY = fabSend.getHeight() / 2;
+                        float maxY = screenHeight - fabSend.getHeight() * 2.5f;
                         destinationY = destinationY < maxY ? maxY : destinationY;
 
                         boolean isMoveX = velocityX > velocityY
-                                && destinationX <= baseX && view.getY() == baseY;
+                                && destinationX <= baseX && fabSend.getY() == baseY;
                         boolean isMoveY = velocityY > velocityX
-                                && destinationY <= baseY && view.getX() == baseX;
+                                && destinationY <= baseY && fabSend.getX() == baseX;
 
                         if (isMoveX) {
 
-                            fabSendLayoutParams = (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
-                            float fabSendNewMargin = screenWidth - destinationX - view.getWidth();
-                            fabSendLayoutParams.setMarginEnd((int) fabSendNewMargin);
-                            view.setLayoutParams(fabSendLayoutParams);
+                            ConstraintLayout.LayoutParams fabSendLayoutParams =
+                                    (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
+                            float fabSendNewMarginEnd = screenWidth - destinationX - fabSend.getWidth();
+                            fabSendLayoutParams.setMarginEnd((int) fabSendNewMarginEnd);
+                            fabSend.setLayoutParams(fabSendLayoutParams);
 
-                            cvInputRootLayoutParams = (ConstraintLayout.LayoutParams) cvInputRoot.getLayoutParams();
+                            ConstraintLayout.LayoutParams cvInputRootLayoutParams =
+                                    (ConstraintLayout.LayoutParams) cvInputRoot.getLayoutParams();
                             cvInputRootLayoutParams.setMarginEnd(
-                                    (int) fabSendNewMargin - BASE_PLAY_BTN_MARGIN_PX + BASE_CV_INPUT_ROOT_PX
-                            );
+                                    (int) fabSendNewMarginEnd - BASE_PLAY_BTN_BOT_END_MARGIN_PX
+                                            + BASE_CV_INPUT_ROOT_END_MARGIN_PX);
 
                             cvInputRoot.setLayoutParams(cvInputRootLayoutParams);
 
@@ -171,10 +158,17 @@ public class ChatInputBar extends ConstraintLayout {
 
                         } else if (isMoveY) {
 
-                            fabSendLayoutParams = (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
-                            float desiredMarginPX = screenHeight - destinationY - view.getHeight();
-                            fabSendLayoutParams.bottomMargin = (int) desiredMarginPX;
-                            view.setLayoutParams(fabSendLayoutParams);
+                            ConstraintLayout.LayoutParams fabSendLayoutParams =
+                                    (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
+                            float fabSendNewMarginBot = screenHeight - destinationY - fabSend.getHeight();
+                            fabSendLayoutParams.bottomMargin = (int) fabSendNewMarginBot;
+                            fabSend.setLayoutParams(fabSendLayoutParams);
+
+                            ConstraintLayout.LayoutParams cvLockRootLayoutParams =
+                                    (LayoutParams) cvLockRoot.getLayoutParams();
+                            cvLockRootLayoutParams.bottomMargin =
+                                    (int) (fabSendNewMarginBot - BASE_PLAY_BTN_BOT_END_MARGIN_PX
+                                            + BASE_CV_LOCK_ROOT_BOT_MARGIN_PX);
 
                             float onePercent = (baseY - maxY) / 100;
                             float currentDistance = destinationY - maxY;
@@ -207,16 +201,49 @@ public class ChatInputBar extends ConstraintLayout {
                 0);
 
         fabSend.dispatchTouchEvent(e);
-        Animation.scaleView(fabSend, 1f, 1f);
+        Anim.scaleView(fabSend, 1f, 1f);
         isUserTouchDisabled = true;
     }
 
     private void enableLayoutTransition(boolean enable) {
         if (enable) {
-            Animation.setLayoutTransition(clRoot, LAYOUT_TRANSITION_DURATION);
+            Anim.setLayoutTransition(clRoot, LAYOUT_TRANSITION_DURATION);
         } else {
             clRoot.setLayoutTransition(null);
         }
+    }
+
+    private void resetViewsState() {
+        ConstraintLayout.LayoutParams fabSendLayoutParams =
+                (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
+        fabSendLayoutParams.setMarginEnd(BASE_PLAY_BTN_BOT_END_MARGIN_PX);
+        fabSendLayoutParams.bottomMargin = BASE_PLAY_BTN_BOT_END_MARGIN_PX;
+        fabSend.setLayoutParams(fabSendLayoutParams);
+
+        ConstraintLayout.LayoutParams cvInputRootLayoutParams =
+                (ConstraintLayout.LayoutParams) cvInputRoot.getLayoutParams();
+        cvInputRootLayoutParams.setMarginEnd(BASE_CV_INPUT_ROOT_END_MARGIN_PX);
+        cvInputRoot.setLayoutParams(cvInputRootLayoutParams);
+
+        ConstraintLayout.LayoutParams cvLockRootLayoutParams =
+                (LayoutParams) cvLockRoot.getLayoutParams();
+        cvLockRootLayoutParams.bottomMargin = BASE_CV_LOCK_ROOT_BOT_MARGIN_PX;
+        cvLockRoot.setLayoutParams(cvLockRootLayoutParams);
+    }
+
+    private void enableTemporalViewTransitions() {
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                enableLayoutTransition(false);
+            }
+        }, LAYOUT_TRANSITION_DURATION + 50); // + some delay
+
+        enableLayoutTransition(true);
+    }
+
+    private void showLock(boolean show) {
+        cvLockRoot.setVisibility(show ? VISIBLE : GONE);
     }
 
 }

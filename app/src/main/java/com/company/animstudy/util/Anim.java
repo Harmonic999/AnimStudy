@@ -7,9 +7,9 @@ import android.animation.ObjectAnimator;
 import android.view.View;
 import android.view.ViewGroup;
 
-public class Animation {
+public class Anim {
 
-    private Animation() {
+    private Anim() {
     }
 
     public static void scaleView(View view, float xScale, float yScale) {
