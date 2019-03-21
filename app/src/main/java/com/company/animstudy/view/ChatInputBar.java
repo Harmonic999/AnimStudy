@@ -22,7 +22,7 @@ import static com.company.animstudy.util.Dimensions.*;
 @SuppressLint("ClickableViewAccessibility")
 public class ChatInputBar extends ConstraintLayout {
 
-    private static final String TAG = "ch_chat_input_bar";
+    private static final String TAG = "chat_input_bar";
 
     private static final int LAYOUT_TRANSITION_DURATION = 300;
 
@@ -150,10 +150,6 @@ public class ChatInputBar extends ConstraintLayout {
                                 && destinationX <= baseX && view.getY() == baseY;
                         boolean isMoveY = velocityY > velocityX
                                 && destinationY <= baseY && view.getX() == baseX;
-
-                        if (view.getX() != baseX && view.getY() != baseY) {
-                            Log.i(TAG, "x=" + view.getX() + ", y=" + view.getY());
-                        }
 
                         if (isMoveX) {
 
