@@ -2,8 +2,10 @@ package com.company.animstudy.util;
 
 
 import android.animation.AnimatorSet;
+import android.animation.LayoutTransition;
 import android.animation.ObjectAnimator;
 import android.view.View;
+import android.view.ViewGroup;
 
 public class Animation {
 
@@ -19,6 +21,13 @@ public class Animation {
         AnimatorSet scale = new AnimatorSet();
         scale.play(scaleX).with(scaleY);
         scale.start();
+    }
+
+    public static void setLayoutTransition(ViewGroup view, long duration) {
+        LayoutTransition transition = new LayoutTransition();
+        transition.enableTransitionType(LayoutTransition.CHANGING);
+        transition.setDuration(duration);
+        view.setLayoutTransition(transition);
     }
 
 }

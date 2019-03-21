@@ -3,10 +3,12 @@ package com.company.animstudy.view;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.os.Handler;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.widget.CardView;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
@@ -21,6 +23,8 @@ import static com.company.animstudy.util.Dimensions.*;
 public class ChatInputBar extends ConstraintLayout {
 
     private static final String TAG = "ch_chat_input_bar";
+
+    private static final int LAYOUT_TRANSITION_DURATION = 300;
 
     private static final float PLAY_BTN_WIDTH_HEIGHT_PX = px(56);
     private static final float MAX_PLAY_BTN_SCALE = 2;
@@ -43,6 +47,7 @@ public class ChatInputBar extends ConstraintLayout {
 
     private boolean isUserTouchDisabled;
 
+    private ConstraintLayout clRoot;
     private FloatingActionButton fabSend;
     private CardView cvInputRoot;
 
@@ -50,6 +55,8 @@ public class ChatInputBar extends ConstraintLayout {
         super(context, attrs);
         inflate(context, R.layout.chat_input_bar, this);
         this.context = context;
+
+        clRoot = findViewById(R.id.cl_root);
 
         fabSend = findViewById(R.id.fab_send);
         fabSend.setOnTouchListener(new DragListener());
@@ -79,6 +86,15 @@ public class ChatInputBar extends ConstraintLayout {
                         isUserTouchDisabled = false;
                     } else {
                         Animation.scaleView(fabSend, 1f, 1f);
+
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                enableLayoutTransition(false);
+                            }
+                        }, LAYOUT_TRANSITION_DURATION + 25); // + some delay
+
+                        enableLayoutTransition(true);
                     }
 
                     ConstraintLayout.LayoutParams fabSendLayoutParams =
@@ -102,8 +118,11 @@ public class ChatInputBar extends ConstraintLayout {
                     if (!isUserTouchDisabled) {
                         currentX = view.getX() - event.getRawX();
                         currentY = view.getY() - event.getRawY();
-                        baseX = view.getX();
-                        baseY = view.getY();
+
+                        if (baseX == 0 && baseY == 0) {
+                            baseX = view.getX();
+                            baseY = view.getY();
+                        }
                     }
 
                     break;
@@ -127,8 +146,16 @@ public class ChatInputBar extends ConstraintLayout {
                         float maxY = fabSend.getHeight() / 2;
                         destinationY = destinationY < maxY ? maxY : destinationY;
 
-                        if (velocityX > velocityY
-                                && destinationX <= baseX && view.getY() == baseY) {
+                        boolean isMoveX = velocityX > velocityY
+                                && destinationX <= baseX && view.getY() == baseY;
+                        boolean isMoveY = velocityY > velocityX
+                                && destinationY <= baseY && view.getX() == baseX;
+
+                        if (view.getX() != baseX && view.getY() != baseY) {
+                            Log.i(TAG, "x=" + view.getX() + ", y=" + view.getY());
+                        }
+
+                        if (isMoveX) {
 
                             fabSendLayoutParams = (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
                             float fabSendNewMargin = screenWidth - destinationX - view.getWidth();
@@ -146,8 +173,7 @@ public class ChatInputBar extends ConstraintLayout {
                                 resetTouch();
                             }
 
-                        } else if (velocityY > velocityX
-                                && destinationY <= baseY && view.getX() == baseX) {
+                        } else if (isMoveY) {
 
                             fabSendLayoutParams = (ConstraintLayout.LayoutParams) fabSend.getLayoutParams();
                             float desiredMarginPX = screenHeight - destinationY - view.getHeight();
@@ -187,6 +213,14 @@ public class ChatInputBar extends ConstraintLayout {
         fabSend.dispatchTouchEvent(e);
         Animation.scaleView(fabSend, 1f, 1f);
         isUserTouchDisabled = true;
+    }
+
+    private void enableLayoutTransition(boolean enable) {
+        if (enable) {
+            Animation.setLayoutTransition(clRoot, LAYOUT_TRANSITION_DURATION);
+        } else {
+            clRoot.setLayoutTransition(null);
+        }
     }
 
 }
