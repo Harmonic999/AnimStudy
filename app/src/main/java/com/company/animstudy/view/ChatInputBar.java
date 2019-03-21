@@ -10,7 +10,6 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
-import android.widget.RelativeLayout;
 
 import com.company.animstudy.R;
 import com.company.animstudy.util.AndroidSystem;
@@ -19,7 +18,7 @@ import com.company.animstudy.util.Animation;
 import static com.company.animstudy.util.Dimensions.*;
 
 @SuppressLint("ClickableViewAccessibility")
-public class ChatInputBar extends RelativeLayout {
+public class ChatInputBar extends ConstraintLayout {
 
     private static final String TAG = "ch_chat_input_bar";
 
